@@ -147,6 +147,37 @@ input:focus, select:focus {
 .option-desc { color: var(--muted); font-size: 0.88rem; margin-top: 2px; }
 .option-price { font-weight: 700; white-space: nowrap; color: var(--primary-dark); }
 .option-price.free { color: var(--ok); }
+.option-side { display: flex; align-items: center; gap: 10px; }
+
+.remove-btn {
+  border: none;
+  background: #fee2e2;
+  color: var(--danger);
+  border-radius: 8px;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+
+.remove-btn:hover { background: #fecaca; }
+
+.custom-add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  background: #fafcff;
+}
+
+.custom-add-title { font-weight: 700; color: var(--muted); }
+.custom-add input[type="text"] { flex: 2 1 200px; }
+.custom-add input[type="number"] { flex: 1 1 120px; }
+.custom-add .btn { padding: 9px 18px; }
 
 /* מחוג */
 .gauge-wrap {

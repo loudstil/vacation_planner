@@ -8,17 +8,19 @@ const CURRENCIES = {
 };
 
 /* ===== שאלות הסימולציה =====
+   בכל שאלה אפשר לבחור כמה אפשרויות, וגם להוסיף פריטים ידנית.
    pricing: איך מחושב המחיר —
    perPerson         פעם אחת לכל נפש
    perNightPerRoom   לכל לילה, כפול מספר חדרים (חדר לכל 3 נפשות)
    perDay            לכל יום חופשה
    perPersonPerDay   לכל נפש לכל יום
+   fixedCouple       מחיר קבוע לזוג
+   manual            סכום שהוזן ידנית במטבע הנבחר, ללא המרה
 */
 const QUESTIONS = [
   {
     id: "flight",
     title: "✈️ איך מגיעים ליעד?",
-    type: "single",
     options: [
       { id: "none",    icon: "🚗", name: "נסיעה ברכב הפרטי", desc: "ללא עלות טיסה", price: 0,   pricing: "perPerson" },
       { id: "charter", icon: "🛫", name: "טיסת צ'רטר / לואו-קוסט", desc: "מחיר לנפש, הלוך-חזור", price: 250, pricing: "perPerson" },
@@ -29,7 +31,6 @@ const QUESTIONS = [
   {
     id: "hotel",
     title: "🏨 איפה ישנים?",
-    type: "single",
     options: [
       { id: "hostel", icon: "🛏️", name: "אכסניה / צימר פשוט", desc: "מחיר לחדר ללילה", price: 70,  pricing: "perNightPerRoom" },
       { id: "star3",  icon: "🏨", name: "מלון 3 כוכבים", desc: "מחיר לחדר ללילה", price: 130, pricing: "perNightPerRoom" },
@@ -40,7 +41,6 @@ const QUESTIONS = [
   {
     id: "car",
     title: "🚙 איך מתניידים ביעד?",
-    type: "single",
     options: [
       { id: "none",    icon: "🚌", name: "תחבורה ציבורית", desc: "הערכת עלות יומית למשפחה", price: 15, pricing: "perDay" },
       { id: "compact", icon: "🚗", name: "רכב שכור קומפקטי", desc: "מחיר ליום", price: 38, pricing: "perDay" },
@@ -50,8 +50,7 @@ const QUESTIONS = [
   },
   {
     id: "attractions",
-    title: "🎢 אילו אטרקציות מתאימות לכם? (אפשר לבחור כמה)",
-    type: "multi",
+    title: "🎢 אילו אטרקציות מתאימות לכם?",
     options: [
       { id: "themepark", icon: "🎢", name: "פארק שעשועים", desc: "כרטיס לנפש", price: 60, pricing: "perPerson" },
       { id: "waterpark", icon: "💦", name: "פארק מים", desc: "כרטיס לנפש", price: 42, pricing: "perPerson" },
@@ -64,7 +63,6 @@ const QUESTIONS = [
   {
     id: "food",
     title: "🍽️ איך אוכלים בחופשה?",
-    type: "single",
     options: [
       { id: "self",  icon: "🛒", name: "בישול עצמי / סופרמרקט", desc: "הערכה לנפש ליום", price: 14, pricing: "perPersonPerDay" },
       { id: "mixed", icon: "🥪", name: "משולב — מסעדה פעם ביום", desc: "הערכה לנפש ליום", price: 30, pricing: "perPersonPerDay" },
@@ -74,11 +72,17 @@ const QUESTIONS = [
   {
     id: "insurance",
     title: "🛡️ ביטוח נסיעות?",
-    type: "single",
     options: [
-      { id: "none",     icon: "🙅", name: "בלי ביטוח", desc: "לא מומלץ...", price: 0, pricing: "perPersonPerDay" },
       { id: "basic",    icon: "📄", name: "ביטוח בסיסי", desc: "מחיר לנפש ליום", price: 3, pricing: "perPersonPerDay" },
       { id: "extended", icon: "🛡️", name: "ביטוח מורחב + ביטול נסיעה", desc: "מחיר לנפש ליום", price: 6, pricing: "perPersonPerDay" },
+    ],
+  },
+  {
+    id: "other",
+    title: "🧾 הוצאות נוספות",
+    options: [
+      { id: "shopping", icon: "🛍️", name: "קניות ומזכרות", desc: "הערכה לנפש", price: 40, pricing: "perPerson" },
+      { id: "parking",  icon: "🅿️", name: "חניות ואגרות", desc: "הערכה ליום", price: 10, pricing: "perDay" },
     ],
   },
 ];
@@ -90,6 +94,7 @@ const CATEGORY_LABELS = {
   attractions: "אטרקציות",
   food: "אוכל",
   insurance: "ביטוח",
+  other: "הוצאות נוספות",
 };
 
 /* ===== מצב המערכת ===== */
@@ -99,9 +104,13 @@ const state = {
   people: 4,
   nights: 5,
   questionIndex: 0,
-  // selections[questionId] = optionId (single) או Set של optionIds (multi)
+  // selections[questionId] = Set של optionIds (כולל פריטים ידניים)
   selections: {},
+  // customOptions[questionId] = מערך פריטים שהוזנו ידנית
+  customOptions: {},
 };
+
+let customCounter = 0;
 
 /* ===== עזרי DOM ===== */
 const $ = (sel) => document.querySelector(sel);
@@ -136,9 +145,14 @@ function optionCost(option) {
     case "perDay":           usd = option.price * days; break;
     case "perPersonPerDay":  usd = option.price * people * days; break;
     case "fixedCouple":      usd = option.price * 2; break;
+    case "manual":           return option.price; // הוזן במטבע הנבחר
     default:                 usd = option.price;
   }
   return toCurrency(usd);
+}
+
+function questionOptions(q) {
+  return [...q.options, ...(state.customOptions[q.id] || [])];
 }
 
 /* ===== שלב 1: הגדרות ===== */
@@ -157,16 +171,15 @@ function renderQuestion() {
   const q = QUESTIONS[state.questionIndex];
   $("#question-title").textContent = q.title;
   $("#question-progress").textContent =
-    `שאלה ${state.questionIndex + 1} מתוך ${QUESTIONS.length}` +
-    (q.type === "multi" ? " · בחירה מרובה" : "");
+    `שאלה ${state.questionIndex + 1} מתוך ${QUESTIONS.length} · אפשר לבחור כמה אפשרויות או להוסיף ידנית`;
 
-  if (!(q.id in state.selections)) {
-    state.selections[q.id] = q.type === "multi" ? new Set() : q.options[0].id;
-  }
+  if (!(q.id in state.selections)) state.selections[q.id] = new Set();
+  const selected = state.selections[q.id];
 
   const container = $("#question-options");
   container.innerHTML = "";
-  q.options.forEach((opt) => {
+
+  questionOptions(q).forEach((opt) => {
     const card = document.createElement("div");
     card.className = "option-card";
     card.setAttribute("role", "button");
@@ -178,25 +191,21 @@ function renderQuestion() {
       <div class="option-main">
         <span class="option-icon">${opt.icon}</span>
         <div>
-          <div class="option-name">${opt.name}</div>
-          <div class="option-desc">${opt.desc}</div>
+          <div class="option-name"></div>
+          <div class="option-desc"></div>
         </div>
       </div>
-      <div class="option-price ${cost === 0 ? "free" : ""}">${priceLabel}</div>
+      <div class="option-side">
+        <span class="option-price ${cost === 0 ? "free" : ""}">${priceLabel}</span>
+        ${opt.pricing === "manual" ? '<button class="remove-btn" title="הסרת פריט">✖</button>' : ""}
+      </div>
     `;
-
-    const isSelected = q.type === "multi"
-      ? state.selections[q.id].has(opt.id)
-      : state.selections[q.id] === opt.id;
-    card.classList.toggle("selected", isSelected);
+    card.querySelector(".option-name").textContent = opt.name;
+    card.querySelector(".option-desc").textContent = opt.desc;
+    card.classList.toggle("selected", selected.has(opt.id));
 
     const toggle = () => {
-      if (q.type === "multi") {
-        const set = state.selections[q.id];
-        set.has(opt.id) ? set.delete(opt.id) : set.add(opt.id);
-      } else {
-        state.selections[q.id] = opt.id;
-      }
+      selected.has(opt.id) ? selected.delete(opt.id) : selected.add(opt.id);
       renderQuestion();
     };
     card.addEventListener("click", toggle);
@@ -204,8 +213,47 @@ function renderQuestion() {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); }
     });
 
+    const removeBtn = card.querySelector(".remove-btn");
+    if (removeBtn) {
+      removeBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        state.customOptions[q.id] = (state.customOptions[q.id] || []).filter((o) => o.id !== opt.id);
+        selected.delete(opt.id);
+        renderQuestion();
+      });
+    }
+
     container.appendChild(card);
   });
+
+  /* טופס הוספה ידנית */
+  const form = document.createElement("div");
+  form.className = "custom-add";
+  form.innerHTML = `
+    <span class="custom-add-title">➕ הוספה ידנית</span>
+    <input type="text" id="custom-name" placeholder="שם הפריט (למשל: כרטיסים להופעה)" maxlength="60">
+    <input type="number" id="custom-price" placeholder="מחיר כולל (${CURRENCIES[state.currency].symbol})" min="0" step="1">
+    <button class="btn primary" id="btn-add-custom">הוספה</button>
+  `;
+  container.appendChild(form);
+
+  const addCustom = () => {
+    const name = form.querySelector("#custom-name").value.trim();
+    const price = Number(form.querySelector("#custom-price").value);
+    if (!name || !(price >= 0)) return;
+    const id = `custom-${++customCounter}`;
+    if (!state.customOptions[q.id]) state.customOptions[q.id] = [];
+    state.customOptions[q.id].push({
+      id, icon: "📝", name,
+      desc: "פריט שהוזן ידנית · מחיר כולל",
+      price, pricing: "manual",
+    });
+    selected.add(id);
+    renderQuestion();
+  };
+  form.querySelector("#btn-add-custom").addEventListener("click", addCustom);
+  form.querySelectorAll("input").forEach((inp) =>
+    inp.addEventListener("keydown", (e) => { if (e.key === "Enter") addCustom(); }));
 
   $("#btn-next").textContent =
     state.questionIndex === QUESTIONS.length - 1 ? "לתוצאות 🏁" : "המשך ←";
@@ -233,18 +281,10 @@ $("#btn-back").addEventListener("click", () => {
 /* ===== חישוב סך הכל ===== */
 function categoryCosts() {
   return QUESTIONS.map((q) => {
-    const sel = state.selections[q.id];
-    let cost = 0;
-    let detail = "";
-    if (q.type === "multi") {
-      const chosen = q.options.filter((o) => sel && sel.has(o.id));
-      cost = chosen.reduce((sum, o) => sum + optionCost(o), 0);
-      detail = chosen.length ? chosen.map((o) => o.name).join(", ") : "ללא";
-    } else {
-      const opt = q.options.find((o) => o.id === sel) || q.options[0];
-      cost = optionCost(opt);
-      detail = opt.name;
-    }
+    const sel = state.selections[q.id] || new Set();
+    const chosen = questionOptions(q).filter((o) => sel.has(o.id));
+    const cost = chosen.reduce((sum, o) => sum + optionCost(o), 0);
+    const detail = chosen.length ? chosen.map((o) => o.name).join(", ") : "ללא";
     return { id: q.id, label: CATEGORY_LABELS[q.id], detail, cost };
   });
 }
@@ -384,6 +424,7 @@ $("#btn-edit").addEventListener("click", () => {
 
 $("#btn-restart").addEventListener("click", () => {
   state.selections = {};
+  state.customOptions = {};
   state.questionIndex = 0;
   showStep(stepSetup);
 });
