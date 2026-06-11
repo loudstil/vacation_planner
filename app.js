@@ -436,6 +436,10 @@ function drawGauge(ratio) {
 
   let parts = "";
 
+  // מסילת רקע מאחורי האזורים
+  parts += `<path d="${arcPath(cx, cy, r, 0, 1)}"
+    fill="none" stroke="#e6ebf3" stroke-width="${width + 6}" stroke-linecap="round"/>`;
+
   // קשתות אזורי הצבע
   zones.forEach((z) => {
     parts += `<path d="${arcPath(cx, cy, r, z.from, z.to)}"
@@ -457,13 +461,13 @@ function drawGauge(ratio) {
 
   // המחט (בחריגה נעצרת בקצה הסקאלה)
   const needleAngle = ratioToAngle(ratio);
-  const tip = polar(cx, cy, r - width / 2 - 10, needleAngle);
-  const baseL = polar(cx, cy, 10, needleAngle + 90);
-  const baseR = polar(cx, cy, 10, needleAngle - 90);
+  const tip = polar(cx, cy, r - width / 2 - 14, needleAngle);
+  const baseL = polar(cx, cy, 7, needleAngle + 90);
+  const baseR = polar(cx, cy, 7, needleAngle - 90);
   parts += `<polygon points="${tip.x},${tip.y} ${baseL.x},${baseL.y} ${baseR.x},${baseR.y}"
     fill="#1f2a3d"/>`;
-  parts += `<circle cx="${cx}" cy="${cy}" r="13" fill="#1f2a3d"/>`;
-  parts += `<circle cx="${cx}" cy="${cy}" r="6" fill="#fff"/>`;
+  parts += `<circle cx="${cx}" cy="${cy}" r="10" fill="#1f2a3d"/>`;
+  parts += `<circle cx="${cx}" cy="${cy}" r="4" fill="#fff"/>`;
 
   // סמן אזהרה כשהמחט "נתקעת" בקצה בגלל חריגה
   if (ratio > GAUGE_MAX) {

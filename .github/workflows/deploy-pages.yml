@@ -26,6 +26,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Stamp asset version for cache busting
+        run: sed -i "s/BUILD_ID/${GITHUB_SHA::7}/g" index.html
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
         with:
