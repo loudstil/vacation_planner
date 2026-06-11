@@ -108,6 +108,10 @@ const state = {
   selections: {},
   // customOptions[questionId] = מערך פריטים שהוזנו ידנית
   customOptions: {},
+  // priceOverrides["qId:optId"] = { amount, currency } — מחיר שהמשתמש שינה
+  priceOverrides: {},
+  // המפתח של האפשרות שנמצאת כרגע במצב עריכת מחיר
+  editingKey: null,
 };
 
 let customCounter = 0;
@@ -134,19 +138,35 @@ function fmt(amount) {
 }
 
 /* ===== חישוב עלות אפשרות ===== */
-function optionCost(option) {
+// מחיר היחידה בדולר, בהתחשב בשינוי ידני של מחיר/מטבע
+function unitPriceUSD(qId, option) {
+  const override = state.priceOverrides[`${qId}:${option.id}`];
+  if (override) return override.amount / CURRENCIES[override.currency].rate;
+  if (option.currency) return option.price / CURRENCIES[option.currency].rate;
+  return option.price; // מחירי ברירת המחדל מוגדרים בדולר
+}
+
+// המחיר והמטבע שיוצגו בעורך — הערך האחרון שהמשתמש קבע, או ברירת המחדל
+function displayedPrice(qId, option) {
+  const override = state.priceOverrides[`${qId}:${option.id}`];
+  if (override) return { amount: override.amount, currency: override.currency };
+  return { amount: option.price, currency: option.currency || "USD" };
+}
+
+function optionCost(qId, option) {
   const { people, nights } = state;
   const days = nights + 1;
   const rooms = Math.ceil(people / 3);
+  const unit = unitPriceUSD(qId, option);
   let usd;
   switch (option.pricing) {
-    case "perPerson":        usd = option.price * people; break;
-    case "perNightPerRoom":  usd = option.price * nights * rooms; break;
-    case "perDay":           usd = option.price * days; break;
-    case "perPersonPerDay":  usd = option.price * people * days; break;
-    case "fixedCouple":      usd = option.price * 2; break;
-    case "manual":           return option.price; // הוזן במטבע הנבחר
-    default:                 usd = option.price;
+    case "perPerson":        usd = unit * people; break;
+    case "perNightPerRoom":  usd = unit * nights * rooms; break;
+    case "perDay":           usd = unit * days; break;
+    case "perPersonPerDay":  usd = unit * people * days; break;
+    case "fixedCouple":      usd = unit * 2; break;
+    case "manual":           usd = unit; break; // מחיר כולל
+    default:                 usd = unit;
   }
   return toCurrency(usd);
 }
@@ -180,13 +200,15 @@ function renderQuestion() {
   container.innerHTML = "";
 
   questionOptions(q).forEach((opt) => {
+    const key = `${q.id}:${opt.id}`;
     const card = document.createElement("div");
     card.className = "option-card";
     card.setAttribute("role", "button");
     card.tabIndex = 0;
 
-    const cost = optionCost(opt);
+    const cost = optionCost(q.id, opt);
     const priceLabel = cost === 0 ? "חינם" : fmt(cost);
+    const isOverridden = key in state.priceOverrides;
     card.innerHTML = `
       <div class="option-main">
         <span class="option-icon">${opt.icon}</span>
@@ -197,11 +219,13 @@ function renderQuestion() {
       </div>
       <div class="option-side">
         <span class="option-price ${cost === 0 ? "free" : ""}">${priceLabel}</span>
-        ${opt.pricing === "manual" ? '<button class="remove-btn" title="הסרת פריט">✖</button>' : ""}
+        <button class="icon-btn edit-btn" title="עריכת מחיר ומטבע">✏️</button>
+        ${opt.pricing === "manual" ? '<button class="icon-btn remove-btn" title="הסרת פריט">✖</button>' : ""}
       </div>
     `;
     card.querySelector(".option-name").textContent = opt.name;
-    card.querySelector(".option-desc").textContent = opt.desc;
+    card.querySelector(".option-desc").textContent =
+      opt.desc + (isOverridden ? " · מחיר מותאם אישית" : "");
     card.classList.toggle("selected", selected.has(opt.id));
 
     const toggle = () => {
@@ -213,17 +237,63 @@ function renderQuestion() {
       if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); }
     });
 
+    card.querySelector(".edit-btn").addEventListener("click", (e) => {
+      e.stopPropagation();
+      state.editingKey = state.editingKey === key ? null : key;
+      renderQuestion();
+    });
+
     const removeBtn = card.querySelector(".remove-btn");
     if (removeBtn) {
       removeBtn.addEventListener("click", (e) => {
         e.stopPropagation();
         state.customOptions[q.id] = (state.customOptions[q.id] || []).filter((o) => o.id !== opt.id);
         selected.delete(opt.id);
+        delete state.priceOverrides[key];
+        if (state.editingKey === key) state.editingKey = null;
         renderQuestion();
       });
     }
 
     container.appendChild(card);
+
+    /* עורך מחיר ומטבע לאפשרות */
+    if (state.editingKey === key) {
+      const current = displayedPrice(q.id, opt);
+      const editor = document.createElement("div");
+      editor.className = "price-editor";
+      editor.innerHTML = `
+        <span class="custom-add-title">✏️ עריכת מחיר — ${opt.name}</span>
+        <input type="number" id="edit-price" min="0" step="1" value="${current.amount}">
+        <select id="edit-currency">
+          ${Object.keys(CURRENCIES).map((c) =>
+            `<option value="${c}" ${c === current.currency ? "selected" : ""}>${CURRENCIES[c].symbol} ${c}</option>`).join("")}
+        </select>
+        <button class="btn primary" id="btn-save-price">שמירה</button>
+        ${isOverridden ? '<button class="btn" id="btn-reset-price">איפוס לברירת מחדל</button>' : ""}
+      `;
+      editor.addEventListener("click", (e) => e.stopPropagation());
+
+      const save = () => {
+        const amount = Number(editor.querySelector("#edit-price").value);
+        if (!(amount >= 0)) return;
+        state.priceOverrides[key] = { amount, currency: editor.querySelector("#edit-currency").value };
+        state.editingKey = null;
+        renderQuestion();
+      };
+      editor.querySelector("#btn-save-price").addEventListener("click", save);
+      editor.querySelector("#edit-price").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") save();
+      });
+      const resetBtn = editor.querySelector("#btn-reset-price");
+      if (resetBtn) resetBtn.addEventListener("click", () => {
+        delete state.priceOverrides[key];
+        state.editingKey = null;
+        renderQuestion();
+      });
+
+      container.appendChild(editor);
+    }
   });
 
   /* טופס הוספה ידנית */
@@ -232,7 +302,11 @@ function renderQuestion() {
   form.innerHTML = `
     <span class="custom-add-title">➕ הוספה ידנית</span>
     <input type="text" id="custom-name" placeholder="שם הפריט (למשל: כרטיסים להופעה)" maxlength="60">
-    <input type="number" id="custom-price" placeholder="מחיר כולל (${CURRENCIES[state.currency].symbol})" min="0" step="1">
+    <input type="number" id="custom-price" placeholder="מחיר כולל" min="0" step="1">
+    <select id="custom-currency">
+      ${Object.keys(CURRENCIES).map((c) =>
+        `<option value="${c}" ${c === state.currency ? "selected" : ""}>${CURRENCIES[c].symbol} ${c}</option>`).join("")}
+    </select>
     <button class="btn primary" id="btn-add-custom">הוספה</button>
   `;
   container.appendChild(form);
@@ -240,13 +314,14 @@ function renderQuestion() {
   const addCustom = () => {
     const name = form.querySelector("#custom-name").value.trim();
     const price = Number(form.querySelector("#custom-price").value);
+    const currency = form.querySelector("#custom-currency").value;
     if (!name || !(price >= 0)) return;
     const id = `custom-${++customCounter}`;
     if (!state.customOptions[q.id]) state.customOptions[q.id] = [];
     state.customOptions[q.id].push({
       id, icon: "📝", name,
       desc: "פריט שהוזן ידנית · מחיר כולל",
-      price, pricing: "manual",
+      price, currency, pricing: "manual",
     });
     selected.add(id);
     renderQuestion();
@@ -283,7 +358,7 @@ function categoryCosts() {
   return QUESTIONS.map((q) => {
     const sel = state.selections[q.id] || new Set();
     const chosen = questionOptions(q).filter((o) => sel.has(o.id));
-    const cost = chosen.reduce((sum, o) => sum + optionCost(o), 0);
+    const cost = chosen.reduce((sum, o) => sum + optionCost(q.id, o), 0);
     const detail = chosen.length ? chosen.map((o) => o.name).join(", ") : "ללא";
     return { id: q.id, label: CATEGORY_LABELS[q.id], detail, cost };
   });
@@ -425,6 +500,8 @@ $("#btn-edit").addEventListener("click", () => {
 $("#btn-restart").addEventListener("click", () => {
   state.selections = {};
   state.customOptions = {};
+  state.priceOverrides = {};
+  state.editingKey = null;
   state.questionIndex = 0;
   showStep(stepSetup);
 });

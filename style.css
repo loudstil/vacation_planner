@@ -149,10 +149,8 @@ input:focus, select:focus {
 .option-price.free { color: var(--ok); }
 .option-side { display: flex; align-items: center; gap: 10px; }
 
-.remove-btn {
+.icon-btn {
   border: none;
-  background: #fee2e2;
-  color: var(--danger);
   border-radius: 8px;
   width: 28px;
   height: 28px;
@@ -161,7 +159,29 @@ input:focus, select:focus {
   line-height: 1;
 }
 
+.edit-btn { background: #e0e9ff; }
+.edit-btn:hover { background: #c7d8ff; }
+
+.remove-btn {
+  background: #fee2e2;
+  color: var(--danger);
+}
+
 .remove-btn:hover { background: #fecaca; }
+
+.price-editor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border: 2px solid var(--primary);
+  border-radius: 12px;
+  background: #eef4ff;
+}
+
+.price-editor input[type="number"] { flex: 1 1 110px; }
+.price-editor .btn { padding: 9px 18px; }
 
 .custom-add {
   display: flex;
