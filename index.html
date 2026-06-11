@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>סימולטור תקציב חופשה משפחתית</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="app-header">
+    <h1>🏖️ סימולטור תקציב חופשה משפחתית</h1>
+    <p class="subtitle">תכננו את החופשה, בחרו אפשרויות וראו אם אתם עומדים בתקציב</p>
+  </header>
+
+  <main id="app">
+    <!-- שלב 1: הגדרת תקציב -->
+    <section class="step" id="step-setup">
+      <h2>שלב 1 · הגדרת תקציב</h2>
+      <div class="form-grid">
+        <label>
+          מטבע
+          <select id="currency">
+            <option value="ILS" selected>₪ שקל (ILS)</option>
+            <option value="USD">$ דולר (USD)</option>
+            <option value="EUR">€ אירו (EUR)</option>
+          </select>
+        </label>
+        <label>
+          תקציב כולל
+          <input type="number" id="budget" min="0" step="100" value="15000">
+        </label>
+        <label>
+          מספר נפשות
+          <input type="number" id="people" min="1" max="12" value="4">
+        </label>
+        <label>
+          מספר לילות
+          <input type="number" id="nights" min="1" max="30" value="5">
+        </label>
+      </div>
+      <div class="actions">
+        <button class="btn primary" id="btn-start">המשך לבחירת אפשרויות ←</button>
+      </div>
+    </section>
+
+    <!-- שלב 2: שאלות / בחירת אפשרויות -->
+    <section class="step hidden" id="step-questions">
+      <h2 id="question-title"></h2>
+      <p class="progress-label" id="question-progress"></p>
+      <div id="question-options" class="options"></div>
+      <div class="actions">
+        <button class="btn" id="btn-back">→ חזרה</button>
+        <button class="btn primary" id="btn-next">המשך ←</button>
+      </div>
+    </section>
+
+    <!-- שלב 3: תוצאות ומחוג -->
+    <section class="step hidden" id="step-results">
+      <h2>סיכום התקציב</h2>
+
+      <div class="gauge-wrap">
+        <svg id="gauge" viewBox="0 0 300 185" role="img" aria-label="מחוג תקציב"></svg>
+        <div class="gauge-readout">
+          <div id="gauge-percent" class="gauge-percent">0%</div>
+          <div id="gauge-status" class="gauge-status"></div>
+        </div>
+      </div>
+
+      <div class="totals">
+        <div class="total-card">
+          <span class="label">תקציב</span>
+          <span class="value" id="total-budget"></span>
+        </div>
+        <div class="total-card">
+          <span class="label">עלות מתוכננת</span>
+          <span class="value" id="total-cost"></span>
+        </div>
+        <div class="total-card" id="balance-card">
+          <span class="label" id="balance-label">יתרה</span>
+          <span class="value" id="total-balance"></span>
+        </div>
+      </div>
+
+      <h3>פירוט לפי קטגוריה</h3>
+      <table class="breakdown" id="breakdown"></table>
+
+      <div class="actions">
+        <button class="btn" id="btn-edit">✏️ שינוי בחירות</button>
+        <button class="btn" id="btn-restart">🔄 התחלה מחדש</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="app-footer">
+    המחירים הם הערכות לצורך סימולציה בלבד · שערי המרה קבועים מראש
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

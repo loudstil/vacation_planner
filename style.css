@@ -1,0 +1,225 @@
+:root {
+  --bg: #f3f6fb;
+  --card: #ffffff;
+  --text: #1f2a3d;
+  --muted: #6b7a90;
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --ok: #22c55e;
+  --warn: #f59e0b;
+  --danger: #ef4444;
+  --border: #dce3ee;
+  --radius: 14px;
+  --shadow: 0 6px 24px rgba(31, 42, 61, 0.08);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", "Heebo", Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-header {
+  text-align: center;
+  padding: 28px 16px 8px;
+}
+
+.app-header h1 { margin: 0 0 6px; font-size: 1.7rem; }
+.subtitle { margin: 0; color: var(--muted); }
+
+main {
+  flex: 1;
+  width: 100%;
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.step {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.step h2 { margin-top: 0; }
+.hidden { display: none; }
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+input, select {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 1rem;
+  background: #fff;
+  color: var(--text);
+}
+
+input:focus, select:focus {
+  outline: 2px solid var(--primary);
+  border-color: var(--primary);
+}
+
+.actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.actions .btn:only-child { margin-inline-start: auto; }
+
+.btn {
+  padding: 10px 22px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.btn:hover { background: #f0f4fa; }
+.btn:active { transform: scale(0.98); }
+
+.btn.primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.btn.primary:hover { background: var(--primary-dark); }
+
+.progress-label {
+  color: var(--muted);
+  margin-top: -8px;
+}
+
+.options {
+  display: grid;
+  gap: 12px;
+}
+
+.option-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.option-card:hover { background: #f7faff; }
+
+.option-card.selected {
+  border-color: var(--primary);
+  background: #eef4ff;
+}
+
+.option-main { display: flex; align-items: center; gap: 12px; }
+.option-icon { font-size: 1.6rem; }
+.option-name { font-weight: 700; }
+.option-desc { color: var(--muted); font-size: 0.88rem; margin-top: 2px; }
+.option-price { font-weight: 700; white-space: nowrap; color: var(--primary-dark); }
+.option-price.free { color: var(--ok); }
+
+/* מחוג */
+.gauge-wrap {
+  position: relative;
+  max-width: 420px;
+  margin: 0 auto 8px;
+}
+
+#gauge { width: 100%; height: auto; display: block; }
+
+.gauge-readout {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 6px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.gauge-percent { font-size: 2rem; font-weight: 800; }
+.gauge-status { font-weight: 600; }
+.gauge-status.ok { color: var(--ok); }
+.gauge-status.warn { color: #b45309; }
+.gauge-status.danger { color: var(--danger); }
+
+.totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin: 16px 0 24px;
+}
+
+.total-card {
+  background: #f7faff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.total-card .label { color: var(--muted); font-size: 0.9rem; }
+.total-card .value { font-size: 1.25rem; font-weight: 800; }
+
+#balance-card.over { background: #fef2f2; border-color: var(--danger); }
+#balance-card.over .value { color: var(--danger); }
+#balance-card.under .value { color: var(--ok); }
+
+table.breakdown {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 8px;
+}
+
+table.breakdown th, table.breakdown td {
+  text-align: right;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+table.breakdown th { color: var(--muted); font-size: 0.9rem; }
+table.breakdown td.amount { font-weight: 700; white-space: nowrap; }
+table.breakdown tr.total-row td { font-weight: 800; border-top: 2px solid var(--text); }
+
+.app-footer {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.85rem;
+  padding: 16px;
+}
+
+@media (max-width: 520px) {
+  .actions { flex-direction: column; }
+  .gauge-percent { font-size: 1.5rem; }
+}
