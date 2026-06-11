@@ -400,9 +400,10 @@ function renderResults() {
 }
 
 /* ===== ציור המחוג =====
-   חצי מעגל 180°. הסקאלה: 0% עד 130% מהתקציב.
-   אזורים: ירוק 0–75%, צהוב 75–100%, אדום 100–130%. */
-const GAUGE_MAX = 1.3;
+   חצי מעגל 180°. הסקאלה: 0% עד 100% מהתקציב.
+   אזורים: ירוק 0–75%, צהוב 75–90%, אדום 90–100%.
+   בחריגה המחט נעצרת בקצה והאחוז האמיתי מוצג בטקסט. */
+const GAUGE_MAX = 1.0;
 
 function polar(cx, cy, r, angleDeg) {
   const rad = (angleDeg * Math.PI) / 180;
@@ -426,11 +427,11 @@ function arcPath(cx, cy, r, fromRatio, toRatio) {
 
 function drawGauge(ratio) {
   const svg = $("#gauge");
-  const cx = 150, cy = 160, r = 120, width = 26;
+  const cx = 170, cy = 175, r = 115, width = 26;
   const zones = [
     { from: 0,    to: 0.75, color: "#22c55e" },
-    { from: 0.75, to: 1.0,  color: "#f59e0b" },
-    { from: 1.0,  to: GAUGE_MAX, color: "#ef4444" },
+    { from: 0.75, to: 0.9,  color: "#f59e0b" },
+    { from: 0.9,  to: 1.0,  color: "#ef4444" },
   ];
 
   let parts = "";
@@ -441,27 +442,20 @@ function drawGauge(ratio) {
       fill="none" stroke="${z.color}" stroke-width="${width}" stroke-linecap="butt"/>`;
   });
 
-  // שנתות ותוויות
-  const ticks = [0, 0.25, 0.5, 0.75, 1.0, 1.3];
+  // שנתות ותוויות — מחוץ לקשת, עם מרווח שמונע חפיפה
+  const ticks = [0, 0.25, 0.5, 0.75, 0.9, 1.0];
   ticks.forEach((t) => {
     const a = ratioToAngle(t);
-    const pOut = polar(cx, cy, r + width / 2 + 2, a);
-    const pIn = polar(cx, cy, r - width / 2 - 2, a);
-    const pLabel = polar(cx, cy, r + width / 2 + 16, a);
+    const pOut = polar(cx, cy, r + width / 2 + 3, a);
+    const pIn = polar(cx, cy, r - width / 2 - 3, a);
+    const pLabel = polar(cx, cy, r + width / 2 + 22, a);
     parts += `<line x1="${pIn.x}" y1="${pIn.y}" x2="${pOut.x}" y2="${pOut.y}"
       stroke="#1f2a3d" stroke-width="1.5"/>`;
-    parts += `<text x="${pLabel.x}" y="${pLabel.y}" font-size="11" fill="#6b7a90"
+    parts += `<text x="${pLabel.x}" y="${pLabel.y}" font-size="12" fill="#6b7a90"
       text-anchor="middle" dominant-baseline="middle">${Math.round(t * 100)}%</text>`;
   });
 
-  // קו גבול התקציב (100%)
-  const a100 = ratioToAngle(1);
-  const b1 = polar(cx, cy, r - width / 2 - 6, a100);
-  const b2 = polar(cx, cy, r + width / 2 + 6, a100);
-  parts += `<line x1="${b1.x}" y1="${b1.y}" x2="${b2.x}" y2="${b2.y}"
-    stroke="#1f2a3d" stroke-width="3" stroke-dasharray="4 3"/>`;
-
-  // המחט
+  // המחט (בחריגה נעצרת בקצה הסקאלה)
   const needleAngle = ratioToAngle(ratio);
   const tip = polar(cx, cy, r - width / 2 - 10, needleAngle);
   const baseL = polar(cx, cy, 10, needleAngle + 90);
@@ -470,6 +464,13 @@ function drawGauge(ratio) {
     fill="#1f2a3d"/>`;
   parts += `<circle cx="${cx}" cy="${cy}" r="13" fill="#1f2a3d"/>`;
   parts += `<circle cx="${cx}" cy="${cy}" r="6" fill="#fff"/>`;
+
+  // סמן אזהרה כשהמחט "נתקעת" בקצה בגלל חריגה
+  if (ratio > GAUGE_MAX) {
+    const pWarn = polar(cx, cy, r + width / 2 + 22, 192);
+    parts += `<text x="${pWarn.x}" y="${pWarn.y}" font-size="16"
+      text-anchor="middle" dominant-baseline="middle">🚨</text>`;
+  }
 
   svg.innerHTML = parts;
 
@@ -481,9 +482,12 @@ function drawGauge(ratio) {
   if (ratio < 0.75) {
     status.textContent = "✅ בתוך התקציב — מרווח נשימה";
     status.classList.add("ok");
-  } else if (ratio <= 1) {
-    status.textContent = "⚠️ קרוב לגבול התקציב";
+  } else if (ratio < 0.9) {
+    status.textContent = "⚠️ מתקרבים לגבול התקציב";
     status.classList.add("warn");
+  } else if (ratio <= 1) {
+    status.textContent = "🔴 על גבול התקציב";
+    status.classList.add("danger");
   } else {
     status.textContent = "🚨 חריגה מהתקציב!";
     status.classList.add("danger");

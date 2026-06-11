@@ -201,7 +201,6 @@ input:focus, select:focus {
 
 /* מחוג */
 .gauge-wrap {
-  position: relative;
   max-width: 420px;
   margin: 0 auto 8px;
 }
@@ -209,11 +208,8 @@ input:focus, select:focus {
 #gauge { width: 100%; height: auto; display: block; }
 
 .gauge-readout {
-  position: absolute;
-  inset-inline: 0;
-  bottom: 6px;
   text-align: center;
-  pointer-events: none;
+  margin-top: 10px;
 }
 
 .gauge-percent { font-size: 2rem; font-weight: 800; }
