@@ -505,6 +505,95 @@ $("#btn-edit").addEventListener("click", () => {
   showStep(stepQuestions);
 });
 
+/* ===== שמירה וטעינה (קובץ JSON) ===== */
+function saveToFile() {
+  const data = {
+    version: 1,
+    savedAt: new Date().toISOString(),
+    currency: state.currency,
+    budget: state.budget,
+    people: state.people,
+    nights: state.nights,
+    selections: Object.fromEntries(
+      Object.entries(state.selections).map(([qId, set]) => [qId, [...set]])),
+    customOptions: state.customOptions,
+    priceOverrides: state.priceOverrides,
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `vacation-budget-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function loadFromData(data) {
+  if (!data || typeof data !== "object" || !("budget" in data)) {
+    throw new Error("מבנה קובץ לא מוכר");
+  }
+  state.currency = data.currency in CURRENCIES ? data.currency : "ILS";
+  state.budget = Math.max(0, Number(data.budget) || 0);
+  state.people = Math.min(12, Math.max(1, Number(data.people) || 1));
+  state.nights = Math.min(30, Math.max(1, Number(data.nights) || 1));
+  state.customOptions = {};
+  for (const [qId, items] of Object.entries(data.customOptions || {})) {
+    if (Array.isArray(items)) {
+      state.customOptions[qId] = items.filter((it) => it && it.id && it.name)
+        .map((it) => ({
+          id: String(it.id), icon: "📝", name: String(it.name),
+          desc: "פריט שהוזן ידנית · מחיר כולל",
+          price: Math.max(0, Number(it.price) || 0),
+          currency: it.currency in CURRENCIES ? it.currency : state.currency,
+          pricing: "manual",
+        }));
+    }
+  }
+  state.selections = {};
+  for (const [qId, ids] of Object.entries(data.selections || {})) {
+    if (Array.isArray(ids)) state.selections[qId] = new Set(ids.map(String));
+  }
+  state.priceOverrides = {};
+  for (const [key, o] of Object.entries(data.priceOverrides || {})) {
+    if (o && Number(o.amount) >= 0 && o.currency in CURRENCIES) {
+      state.priceOverrides[key] = { amount: Number(o.amount), currency: o.currency };
+    }
+  }
+  // המשך מספור פריטים ידניים אחרי הגבוה ביותר שנטען, למניעת התנגשות מזהים
+  customCounter = Math.max(0, ...Object.values(state.customOptions).flat()
+    .map((it) => Number((it.id.match(/^custom-(\d+)$/) || [])[1]) || 0));
+  state.editingKey = null;
+  state.questionIndex = 0;
+
+  // עדכון שדות מסך הפתיחה כך שישקפו את מה שנטען
+  $("#currency").value = state.currency;
+  $("#budget").value = state.budget;
+  $("#people").value = state.people;
+  $("#nights").value = state.nights;
+
+  renderResults();
+  showStep(stepResults);
+}
+
+const fileInput = $("#file-input");
+fileInput.addEventListener("change", () => {
+  const file = fileInput.files[0];
+  fileInput.value = "";
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      loadFromData(JSON.parse(reader.result));
+    } catch (err) {
+      alert("טעינת הקובץ נכשלה: " + err.message);
+    }
+  };
+  reader.readAsText(file);
+});
+
+$("#btn-save").addEventListener("click", saveToFile);
+$("#btn-load").addEventListener("click", () => fileInput.click());
+$("#btn-load-setup").addEventListener("click", () => fileInput.click());
+
 $("#btn-restart").addEventListener("click", () => {
   state.selections = {};
   state.customOptions = {};

@@ -39,6 +39,7 @@
         </label>
       </div>
       <div class="actions">
+        <button class="btn" id="btn-load-setup">📂 טעינה מקובץ</button>
         <button class="btn primary" id="btn-start">המשך לבחירת אפשרויות ←</button>
       </div>
     </section>
@@ -86,10 +87,14 @@
 
       <div class="actions">
         <button class="btn" id="btn-edit">✏️ שינוי בחירות</button>
+        <button class="btn" id="btn-save">💾 שמירה לקובץ</button>
+        <button class="btn" id="btn-load">📂 טעינה מקובץ</button>
         <button class="btn" id="btn-restart">🔄 התחלה מחדש</button>
       </div>
     </section>
   </main>
+
+  <input type="file" id="file-input" accept=".json,application/json" hidden>
 
   <footer class="app-footer">
     המחירים הם הערכות לצורך סימולציה בלבד · שערי המרה קבועים מראש
